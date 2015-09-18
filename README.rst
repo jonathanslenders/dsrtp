@@ -6,7 +6,7 @@ dsrtp
    :target: https://travis-ci.org/mayfieldrobotics/dsrtp
     
 .. image:: https://img.shields.io/pypi/v/dsrtp.svg
-   :target: https://travis-ci.org/mayfieldrobotics/dsrtp
+   :target: https://pypi.python.org/pypi/dsrtp
 
 Simple front-end for decrypting captured `SRTP and SRTCP <https://www.ietf.org/rfc/rfc3711.txt>`_ packets using:
 
