@@ -32,7 +32,7 @@ PCAP file:
         dsrtp.write_packets(decrypted_pkts)
 
 """
-__version__ = '0.1.1'
+__version__ = '0.2.0'
 
 __all__ = [
     'is_srtp_packet',
