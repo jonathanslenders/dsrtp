@@ -44,7 +44,7 @@ cdef extern from 'srtp/srtp.h':
         
     struct ssrc_t:
     
-        ssrc_type_t type
+        int type
         unsigned int value
 
     struct srtp_ctx_t:

@@ -16,9 +16,56 @@ Simple front-end for decrypting captured `SRTP and SRTCP <https://www.ietf.org/r
 install
 -------
 
+Install devel `libpcap <https://github.com/the-tcpdump-group/libpcap>`_ and `libsrtp <https://github.com/cisco/libsrtp>`_ if you need to, e.g.:
+
+.. code:: bash
+
+   sudo apt-get install libpcap-dev libsrtp0-dev
+   
+and then:
+
 .. code:: bash
 
    pip install dsrtp
+
+usage
+-----
+
+command
+~~~~~~~
+
+To e.g. decrypt captured packets and write then back to a capture file:
+
+.. code:: bash
+
+   dsrtp test/fixtures/av.pcap /tmp/rtp.pcap -ld -k test/fixtures/av_material.hex
+
+If you have a cluttered capture (e.g. multiple SRTP streams) then you can
+select e.g. the in-bound stream by ``address:port`` like:
+
+.. code:: bash
+
+   dsrtp test/fixtures/av.pcap /tmp/rtp.pcap -k test/fixtures/av_material.hex -l d -i 192.168.121.234:60401
+
+lib
+~~~
+
+To do the same in code:
+
+.. code:: python
+
+   import dsrtp
+   
+   enc_km = open('test/fixtures/av_material.hex').read()
+   km = dsrtp.KeyingMaterial.unpack_hex(enc_km)
+   p = dsrtp.SRTPPolicy(ssrc_type=dsrtp.SRTPPolicy.SSRC_ANY_INBOUND, key=km.local)
+   
+   with dsrtp.SRTP(p) as ctx, \
+           open('test/fixtures/av.pcap', 'rb') as srtp_pcap, \
+           open('/tmp/rtp.pcap', 'wb') as rtp_pcap:
+     pkts = dsrtp.read_packets(srtp_pcap)
+     decrypted_pkts = dsrtp.decrypt_packets(ctx, pkts)
+     dsrtp.write_packets(rtp_pcap, decrypted_pkts)
 
 dev
 ---
@@ -30,13 +77,7 @@ Create a `venv <https://virtualenv.pypa.io/en/latest/>`_:
    mkvirtualenv dsrtp
    pip install Cython
 
-then install devel `libsrtp <https://github.com/the-tcpdump-group/libpcap>`_ and `libsrtp <https://github.com/cisco/libsrtp>`_ if you need to, e.g.:
-
-.. code:: bash
-
-   sudo apt-get install libpcap-dev libsrtp0-dev
-
-and then get it:
+then get it:
 
 .. code:: bash
 
@@ -50,36 +91,6 @@ and test it:
 .. code:: bash
 
    py.test test/ --cov dsrtp --cov-report term-missing --pep8
-
-usage
------
-
-code
-~~~~
-
-To e.g. decrypt captured packets and write then back to a capture file:
-
-.. code:: python
-
-   import dsrtp
-    
-   material = 'hex-encoding-of-dtls-keying-material'.decode('hex') 
-    
-   with dsrtp.SRTP(material) as ctx, \
-            open('/path/to/srtp.pcap', 'rb') as srtp_pcap, \
-            open('/path/to/rtp.pcap', 'rb') as rtp_pcap:
-      pkts = dsrtp.read_packets(srtp_pcap)
-      decrypted_pkts = decrypt_srtp_packet(ctx, pkts)
-      dsrtp.write_packets(decrypted_pkts)
-
-cli
-~~~
-
-To do the same as a command:
-
-.. code:: bash
-
-   dsrtp /path/to/srtp.pcap /path/to/rtp.pcap -ld -k/path/to/keying/material.hex
 
 release
 -------

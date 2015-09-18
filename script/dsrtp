@@ -1,4 +1,13 @@
 #!/usr/bin/env python
+"""
+Command line interface to dsrtp. To e.g. decrypt captured packets and write
+then back to a capture file:
+
+.. code:: bash
+
+   dsrtp test/fixtures/av.pcap out.pcap -k test/fixtures/av_material.hex -l d -i 192.168.121.234:60401
+
+"""
 import argparse
 import logging
 import sys
@@ -9,38 +18,52 @@ import dsrtp
 logger = logging.getLogger('dsrtp')
 
 
-def decode_keying_material(encoded):
-    return encoded.decode('hex')
-
 
 def decrypt_packets(args):
+    
+    def parse_bound(bound):
+        parts = (bound or ':').split(':')
+        address = parts[0] or None
+        port = parts[1] or None
+        if port:
+            port = int(port)
+        return address, port
+    
     logger.debug('decoding keying material from %s', args.keying_material)
-    raw_keying_material = open(args.keying_material, 'rb').read()
-    keying_material = decode_keying_material(raw_keying_material)
+    encoded_km = open(args.keying_material, 'rb').read()
+    km = dsrtp.KeyingMaterial.unpack_encoded(encoded_km)
 
-    logger.debug('initializing srtp contexts')
-    srtp_ctx = dsrtp.SRTP(keying_material)
-    with srtp_ctx:
-        logger.debug('reading packets from %s', args.src)
-        src = sys.stdin if args.src == '-' else open(args.src, 'rb')
-        src_pkts = dsrtp.read_packets(src)
-
-        decrypted_pkts = dsrtp.decrypt_packets(
-            srtp_ctx,
-            src_pkts,
-            unknown=args.unknown,
-            malformed=args.malformed,
-            decrypt_srtp=True,
-            decrypt_srtcp=False,
+    srtp_streams = []
+    if args.inbound:
+        logger.debug('creating in-bound srtp stream')
+        srtp_streams.append(
+            dsrtp.SRTPStream(km.remote, *parse_bound(args.inbound))
+        )
+    if args.outbound:
+        logger.debug('creating out-bound srtp stream')
+        srtp_streams.append(
+            dsrtp.SRTPStream(km.local, *parse_bound(args.outbound))
         )
 
-        dst = sys.stdout if args.src == '-' else open(args.dst, 'wb')
-        try:
-            logger.debug('writing packets to %s', args.src)
-            dsrtp.write_packets(dst, decrypted_pkts)
-        finally:
-            if dst is not sys.stdout:
-                dst.close()
+    logger.debug('reading packets from %s', args.src)
+    src = sys.stdin if args.src == '-' else open(args.src, 'rb')
+    src_pkts = dsrtp.read_packets(src)
+
+    decrypted_pkts = dsrtp.decrypt_packets(
+        srtp_streams,
+        src_pkts,
+        unknown=args.unknown,
+        malformed=args.malformed,
+        streamless=args.streamless,
+    )
+
+    dst = sys.stdout if args.src == '-' else open(args.dst, 'wb')
+    try:
+        logger.debug('writing packets to %s', args.src)
+        dsrtp.write_packets(dst, decrypted_pkts)
+    finally:
+        if dst is not sys.stdout:
+            dst.close()
 
 
 def main():
@@ -68,6 +91,12 @@ def main():
         help='malformed SRT[C]P packet policy',
     )
     parser.add_argument(
+        '-s', '--streamless',
+        choices=['drop', 'pass'],
+        default='drop',
+        help='streamless SRT[C]P packet policy',
+    )
+    parser.add_argument(
         '-k', '--keying-material',
         metavar='FILE',
         help='hex or base64 encoded DTLS keying material',
@@ -77,6 +106,16 @@ def main():
         choices=['d', 'i', 'w', 'e'],
         default='w',
         help='log level',
+    )
+    parser.add_argument(
+        '-i', '--inbound',
+        metavar='ADDRESS:PORT',
+        help='destination identifying in-bound stream, defaults to all',
+    )
+    parser.add_argument(
+        '-o', '--outbound',
+        metavar='ADDRESS:PORT',
+        help='destination identifying out-bound stream, defaults to all',
     )
 
     args = parser.parse_args()

@@ -18,17 +18,17 @@ Everything hard is done by:
 Use it like e.g. this to decrypt SRTP packets in PCAP file to RTP packets in
 PCAP file:
 
-.. code::python
+.. code:: python
 
     import dsrtp
     
     material = 'hex-encoding-of-dtls-keying-material'.decode('hex') 
     
-    with dsrtp.SRTP(material) as srtp_ctx, \
-         open('/path/to/srtp.pcap', 'rb') as srtp_pcap, \
-         open('/path/to/rtp.pcap', 'rb') as rtp_pcap,:
+    with dsrtp.SRTP(material) as ctx, \
+            open('/path/to/srtp.pcap', 'rb') as srtp_pcap, \
+            open('/path/to/rtp.pcap', 'wb') as rtp_pcap:
         pkts = dsrtp.read_packets(srtp_pcap)
-        decrypted_pkts = decrypt_srtp_packet(srtp_ctx, pkts)
+        decrypted_pkts = decrypt_srtp_packets(ctx, pkts)
         dsrtp.write_packets(decrypted_pkts)
 
 """
@@ -36,19 +36,26 @@ __version__ = '0.1.1'
 
 __all__ = [
     'is_srtp_packet',
+    'is_srctp_packet',
     'decrypt_srtp_packet',
-    'decrypt_srtp_packets',
+    'decrypt_srtcp_packet',
+    'decrypt_packets',
     'read_packets'
     'write_packets'
+    'KeyingMaterial',
+    'SRTPPolicies',
+    'SRTPPolicy',
     'SRTP',
     'SRTPError',
 ]
 
+import collections
 import logging
+import struct
 
 import dpkt
 
-from .ext import SRTP, SRTPError
+from .ext import KeyingMaterial, SRTPPolicies, SRTPPolicy, SRTP, SRTPError
 
 
 logger = logging.getLogger(__name__)
@@ -73,7 +80,7 @@ def is_srtp_packet(packet):
     ip = packet.data
     udp = ip.data
     rtp = dpkt.rtp.RTP(udp.data)
-    return rtp.pt < 64 or 96 <= rtp.pt
+    return rtp.version == 2 and (rtp.pt < 64 or 96 <= rtp.pt)
 
 
 def is_srtcp_packet(packet):
@@ -85,7 +92,13 @@ def is_srtcp_packet(packet):
     ip = packet.data
     udp = ip.data
     rtp = dpkt.rtp.RTP(udp.data)
-    return 64 <= rtp.pt and rtp.pt < 96
+    return rtp.version == 2 and (64 <= rtp.pt and rtp.pt < 96)
+
+
+def as_rtp(packet):
+    ip = packet.data
+    udp = ip.data
+    return dpkt.rtp.RTP(udp.data)
 
 
 def decrypt_srtp_packet(srtp, packet):
@@ -113,49 +126,74 @@ def decrypt_srtcp_packet(srtp, packet):
 
 
 def decrypt_packets(
-        srtp,
+        streams,
         packets,
         packet_filter=None,
         unknown='pass',
         excluded='drop',
         malformed='drop',
-        decrypt_srtp=True,
-        decrypt_srtcp=True,
+        streamless='drop',
     ):
     """
     Decrypts SRTP and SRTCP `dpkt.Packet`s.
     """
+    if not isinstance(streams, (collections.Sequence)):
+        streams = [streams]
+    streams = [SRTPStream(s) if isinstance(s, SRTP)  else s for s in streams]
+
+    def match(packet):
+        for stream in streams:
+            if stream.match(packet):
+                return stream
+
     drop_excluded = excluded == 'drop'
     drop_unknown = unknown == 'drop'
     drop_malformed = malformed == 'drop'
+    drop_streamless = streamless == 'drop'
     raise_malformed = malformed == 'raise'
+
     if packet_filter is None:
         packet_filter = lambda frame: True
+
     for i, (ts, packet) in enumerate(packets):
         if not packet_filter(packet):
             if drop_excluded:
                 logger.debug('dropping excluded packet #%d', i + 1)
                 continue
-        elif decrypt_srtp and is_srtp_packet(packet):
-            try:
-                packet = decrypt_srtp_packet(srtp, packet)
-            except SRTPError, ex:
-                if drop_malformed:
-                    logger.debug('dropping malformed srtcp packet #%d', i + 1, exc_info=ex)
+        elif is_srtp_packet(packet):
+            stream = match(packet)
+            if stream is None:
+                if drop_streamless:
+                    logger.debug('dropping streamless srtp packet #%d', i + 1)
                     continue
-                if raise_malformed:
-                    raise
-                logger.debug('keeping malformed srtcp packet #%d', i + 1, exc_info=ex)
-        elif decrypt_srtcp and is_srtcp_packet(packet):
-            try:
-                packet = decrypt_srtp_packet(srtp, packet)
-            except SRTPError, ex:
-                if drop_malformed:
-                    logger.debug('dropping malformed srtcp packet #%d', i + 1, exc_info=ex)
+                logger.debug('keeping streamless srtp packet #%d', i + 1)
+            else:
+                try:
+                    packet = stream.decrypt_srtp_packet(packet)
+                except SRTPError, ex:
+                    if drop_malformed:
+                        logger.debug('dropping malformed srtp packet #%d', i + 1, exc_info=ex)
+                        continue
+                    if raise_malformed:
+                        raise
+                    logger.debug('keeping malformed srtp packet #%d', i + 1, exc_info=ex)
+        elif is_srtcp_packet(packet):
+            stream = match(packet)
+            if stream is None:
+                if drop_streamless:
+                    logger.debug('dropping streamless srtcp packet #%d', i + 1)
                     continue
-                if raise_malformed:
-                    raise
-                logger.debug('keeping malformed srtcp packet #%d', i + 1, exc_info=ex)
+                logger.debug('keeping streamless srtcp packet #%d', i + 1)
+            else:
+                try:
+                    packet = stream.decrypt_srtcp_packet(packet)
+                except SRTPError, ex:
+                    if drop_malformed:
+                        logger.debug('dropping malformed srtcp packet #%d', i + 1, exc_info=ex)
+                        continue
+                    if raise_malformed:
+                        raise
+                    logger.debug('keeping malformed srtcp packet #%d', i + 1, exc_info=ex)
         else:
             if drop_unknown:
                 logger.debug('dropping unknown packet #%d', i + 1)
@@ -179,3 +217,41 @@ def write_packets(fo, packets):
     pcap = dpkt.pcap.Writer(fo)
     for ts, packet in packets:
         pcap.writepkt(packet, ts)
+
+
+class SRTPStream(object):
+    """
+    Used to correlate packets and a SRTP context. Currently matches only on:
+    
+    - ip.dst
+    - udp.dport
+    
+    """
+
+    def __init__(self, key, address=None, port=None):
+        if isinstance(key, SRTP):
+            self.ctx = key
+        else:
+            self.ctx = SRTP(SRTPPolicy(
+                ssrc_type=SRTPPolicy.SSRC_ANY_INBOUND,
+                key=key,
+            ))
+        self.ctx.init()
+        if address:
+            address = struct.pack('>4B', *map(int, address.split('.')))
+        self.address = address
+        self.port = port
+
+    def match(self, packet):
+        ip = packet.data
+        udp = ip.data
+        return (
+            (self.address is None or ip.dst == self.address) and
+            (self.port is None or udp.dport == self.port)
+        )
+
+    def decrypt_srtp_packet(self, packet):
+        return decrypt_srtp_packet(self.ctx, packet)
+
+    def decrypt_srtcp_packet(self, packet):
+        return decrypt_srtcp_packet(self.ctx, packet)
