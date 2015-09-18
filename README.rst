@@ -24,11 +24,11 @@ Create a `venv <https://virtualenv.pypa.io/en/latest/>`_:
    mkvirtualenv dsrtp
    pip install Cython
 
-then install devel `libsrtp <https://github.com/cisco/libsrtp>`_ if you need to, e.g.:
+then install devel `libsrtp <https://github.com/the-tcpdump-group/libpcap>`_ and `libsrtp <https://github.com/cisco/libsrtp>`_ if you need to, e.g.:
 
 .. code:: bash
 
-   sudo apt-get install libsrtp0-dev
+   sudo apt-get install libpcap-dev libsrtp0-dev
 
 and then get it:
 
@@ -73,7 +73,7 @@ To do the same as a command:
 
 .. code:: bash
 
-   dsrtp /path/to/srtp.pcap /path/to/rtp.pcap
+   dsrtp /path/to/srtp.pcap /path/to/rtp.pcap -ld -k/path/to/keying/material.hex
 
 release
 -------
