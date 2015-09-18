@@ -2,10 +2,10 @@
 dsrtp
 =====
 
-Simple front-end for decrypting captured `SRTP <>`_ and `SRTCP <>`_ packets using:
+Simple front-end for decrypting captured `SRTP and SRTCP <https://www.ietf.org/rfc/rfc3711.txt>`_ packets using:
 
-- `libsrtp <>`_ and 
-- `dpkt <>`_
+- `libsrtp <https://github.com/cisco/libsrtp>`_ and 
+- `dpkt <https://github.com/kbandla/dpkt>`_
 
 install
 -------
@@ -17,14 +17,14 @@ install
 dev
 ---
 
-Create a `venv <>`_:
+Create a `venv <https://virtualenv.pypa.io/en/latest/>`_:
 
 .. code:: bash
 
    mkvirtualenv dsrtp
    pip install Cython
 
-then install devel `libsrtp <>`_ if you need to, e.g.:
+then install devel `libsrtp <https://github.com/cisco/libsrtp>`_ if you need to, e.g.:
 
 .. code:: bash
 
