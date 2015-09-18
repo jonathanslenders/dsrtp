@@ -1,0 +1,5 @@
+*.o
+*.so
+dsrtp/ext/ext.c
+build/
+scratch/

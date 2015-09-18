@@ -1,0 +1,100 @@
+#!/usr/bin/env python
+import argparse
+import logging
+import sys
+
+import dsrtp
+
+
+logger = logging.getLogger('dsrtp')
+
+
+def decode_keying_material(encoded):
+    return encoded.decode('hex')
+
+
+def decrypt_packets(args):
+    logger.debug('decoding keying material from %s', args.keying_material)
+    raw_keying_material = open(args.keying_material, 'rb').read()
+    keying_material = decode_keying_material(raw_keying_material)
+
+    logger.debug('initializing srtp contexts')
+    srtp_ctx = dsrtp.SRTP(keying_material)
+    with srtp_ctx:
+        logger.debug('reading packets from %s', args.src)
+        src = sys.stdin if args.src == '-' else open(args.src, 'rb')
+        src_pkts = dsrtp.read_packets(src)
+
+        decrypted_pkts = dsrtp.decrypt_packets(
+            srtp_ctx,
+            src_pkts,
+            unknown=args.unknown,
+            malformed=args.malformed,
+            decrypt_srtp=True,
+            decrypt_srtcp=False,
+        )
+
+        dst = sys.stdout if args.src == '-' else open(args.dst, 'wb')
+        try:
+            logger.debug('writing packets to %s', args.src)
+            dsrtp.write_packets(dst, decrypted_pkts)
+        finally:
+            if dst is not sys.stdout:
+                dst.close()
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description='Decrypts captured SRT[C]P packets.'
+    )
+    parser.add_argument(
+        'src',
+        help='File to read encrypted packets from, or - for stdin',
+    )
+    parser.add_argument(
+        'dst',
+        help='File to write decrypted packets to, or - for stdout',
+    )
+    parser.add_argument(
+        '-u', '--unknown',
+        choices=['drop', 'pass'],
+        default='drop',
+        help='unknown packet policy',
+    )
+    parser.add_argument(
+        '-m', '--malformed',
+        choices=['drop', 'pass', 'raise'],
+        default='drop',
+        help='malformed SRT[C]P packet policy',
+    )
+    parser.add_argument(
+        '-k', '--keying-material',
+        metavar='FILE',
+        help='hex or base64 encoded DTLS keying material',
+    )
+    parser.add_argument(
+        '-l', '--log-level',
+        choices=['d', 'i', 'w', 'e'],
+        default='w',
+        help='log level',
+    )
+
+    args = parser.parse_args()
+
+    logging.basicConfig(
+        level={
+            'd': logging.DEBUG,
+            'i': logging.INFO,
+            'w': logging.WARN,
+            'e': logging.ERROR,
+        }[args.log_level],
+        format='%(asctime)s : %(levelname)s : %(name)s : %(message)s',
+        stream=sys.stderr,
+    )
+
+    decrypt_packets(args)
+
+
+if __name__ == '__main__':
+    main()
+
