@@ -2,4 +2,5 @@
 *.so
 dsrtp/ext/ext.c
 build/
+dist/
 scratch/

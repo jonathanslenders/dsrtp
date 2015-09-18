@@ -9,7 +9,20 @@ before_install:
 
 install:
 - pip install Cython
+- pip install coveralls
 - pip install -e .[test]
+
 
 script:
 - py.test test/ --cov dsrtp --cov-report term-missing --pep8
+
+#after_success:
+#- coveralls
+
+deploy:
+  provider: pypi
+  user: aisch
+  password:
+    secure: "thgfAqkutWcxUQVcnHp2W7DqoF7R7uo1o2j4S0Sajg9P7GkC48VAMs3iUeYRUgqZ5DdBftevz1pLKQ0jGq+bHZGSZiEHQ0egPzQGNDO7g37u84uCQDciDxmWDjB8eBcu+8Rx2Aq185YI3D3wFG/1vmWfMaSx1bMnd+32tzaULGFLWAKmgNlN7iTwg7wnFzusAMDxPOtTrJfgiHxMmLysori5hBLzYS1TjIrvQA/PByV0Gi2YRorv7zVesk4rdSEdQatZQLz+KnL1ZO9p9MymFSXzt10A1ZhyoJuLr9CnOFWMHnJkBz6dvA3ZunvCEK1hSQGtQ/hO4QETO+NJqqvS8CREKi+KRXl4EwMdvX8OVsVBxX7fKvLOcHESq9mZbferPUrB9EelyGutX6jFYsjBSQ1MaGgBg29Uo8OAK6po46YWLw9pMH+zf5xTZvMbSwiZPW5h1mV/Oi0+PCefJysfoQwpdzGnLP0SEzhbW1L7xH1cpEmA/abQAzSjWj2fJQpcT4yPU6ocpk+wf+nhiutuMu1Rzh3EMjpj1n84sY0khaZOgJffID5hsCKXs4ceiAO8LYRqHnlGbnM8Z2qYyEbw0oYG1W2MM2eL/j0v2ofqKA2F1kTwtH9Bn18/oRiJOo6OsYFfbIuFt72qO0tQp1qXFd17fbPIJJQ7BmAayYudDVI="
+  on:
+    tags: true

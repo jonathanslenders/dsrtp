@@ -1,8 +1,6 @@
 import re
 import setuptools.command.test
 
-import Cython.Build
-
 
 class PyTest(setuptools.command.test.test):
 
@@ -26,21 +24,37 @@ version = (
     .group(1)
 )
 
-packages = setuptools.find_packages('')
+packages = setuptools.find_packages('.', exclude=('test',))
 
 scripts = [
     'script/dsrtp'
 ]
 
-ext_modules = Cython.Build.cythonize([
-    setuptools.Extension(
-        'dsrtp.ext',
-        ['dsrtp/ext/ext.pyx'],
-        include_dirs=['dsrtp/ext/'],
-        extra_compile_args=['-g', '-O0'],
-        libraries=['srtp'],
-    )
-])
+try:
+    import Cython.Build
+    use_cython = True
+except ImportError:
+    use_cython = False
+if use_cython:
+    ext_modules = Cython.Build.cythonize([
+        setuptools.Extension(
+            'dsrtp.ext',
+            ['dsrtp/ext/ext.pyx'],
+            include_dirs=['dsrtp/ext/'],
+            extra_compile_args=['-g', '-O0'],
+            libraries=['srtp'],
+        )
+    ])
+else:
+    ext_modules = [
+        setuptools.Extension(
+            'dsrtp.ext',
+            ['dsrtp/ext/ext.c'],
+            include_dirs=['dsrtp/ext/'],
+            extra_compile_args=['-g', '-O0'],
+            libraries=['srtp'],
+        )
+    ]
 
 extras_require = {
     'test': [
@@ -64,7 +78,6 @@ setuptools.setup(
     ext_modules=ext_modules,
     platforms='any',
     install_requires=[
-        'cython >=0.23,<0.24',
         'dpkt >=1.8,<2',
     ],
     tests_require=extras_require['test'],
