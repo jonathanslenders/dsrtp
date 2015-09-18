@@ -9,7 +9,7 @@ before_install:
 
 install:
 - pip install Cython
-- pip install -e .[tests]
+- pip install -e .[test]
 
 script:
 - py.test test/ --cov dsrtp --cov-report term-missing --pep8

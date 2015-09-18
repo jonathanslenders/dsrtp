@@ -2,6 +2,9 @@
 dsrtp
 =====
 
+.. image:: https://travis-ci.org/mayfieldrobotics/dsrtp.svg
+    :target: https://travis-ci.org/mayfieldrobotics/dsrtp
+
 Simple front-end for decrypting captured `SRTP and SRTCP <https://www.ietf.org/rfc/rfc3711.txt>`_ packets using:
 
 - `libsrtp <https://github.com/cisco/libsrtp>`_ and 
