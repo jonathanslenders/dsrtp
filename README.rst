@@ -34,7 +34,7 @@ and then:
 usage
 -----
 
-Can be via `command line <cli>`_ or as `python lib <lib>`_.
+Can be via `cli`_ or as python `lib`_.
 
 cli
 ~~~
