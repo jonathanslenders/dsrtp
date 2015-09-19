@@ -70,7 +70,7 @@ setuptools.setup(
     url='https://github.com/mayfieldrobotics/dsrtp/',
     author='Mayfield Robotics',
     author_email='dev+dsrtp@mayfieldrobotics.com',
-    license='MIT',
+    license='BSD',
     description='Frontend for decrypting captured SRTP packets.',
     long_description=open('README.rst').read(),
     packages=packages,

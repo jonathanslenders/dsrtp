@@ -31,21 +31,24 @@ and then:
 usage
 -----
 
-command
-~~~~~~~
+Can be via `command line <cli>` or as `python lib <lib>`.
 
-To e.g. decrypt captured packets and write then back to a capture file:
+cli
+~~~
+
+To e.g. decrypt captured packets and write them back to a capture file from
+command line:
 
 .. code:: bash
 
-   dsrtp test/fixtures/av.pcap /tmp/rtp.pcap -ld -k test/fixtures/av_material.hex
+   dsrtp test/fixtures/av.pcap /tmp/rtp.pcap -k test/fixtures/av_material.hex -ld
 
 If you have a cluttered capture (e.g. multiple SRTP streams) then you can
 select e.g. the in-bound stream by ``address:port`` like:
 
 .. code:: bash
 
-   dsrtp test/fixtures/av.pcap /tmp/rtp.pcap -k test/fixtures/av_material.hex -l d -i 192.168.121.234:60401
+   dsrtp test/fixtures/av.pcap /tmp/rtp.pcap -k test/fixtures/av_material.hex -ld -i 192.168.121.234:60401 
 
 lib
 ~~~
@@ -101,11 +104,7 @@ Tests pass:
 
    py.test test/ --cov dsrtp --cov-report term-missing --pep8
 
-so update ``__version__`` in:
-
-- ``dsrtp/__init__.py``
-
-commit and tag it:
+so update ``__version__`` in ``dsrtp/__init__.py``. Commit and tag it:
 
 .. code:: bash
 
