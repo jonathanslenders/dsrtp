@@ -4,7 +4,10 @@ dsrtp
 
 .. image:: https://travis-ci.org/mayfieldrobotics/dsrtp.svg
    :target: https://travis-ci.org/mayfieldrobotics/dsrtp
-    
+
+.. image:: https://coveralls.io/repos/mayfieldrobotics/dsrtp/badge.svg?branch=master&service=github
+   :target: https://coveralls.io/github/mayfieldrobotics/dsrtp?branch=master
+
 .. image:: https://img.shields.io/pypi/v/dsrtp.svg
    :target: https://pypi.python.org/pypi/dsrtp
 
@@ -31,7 +34,7 @@ and then:
 usage
 -----
 
-Can be via `command line <cli>` or as `python lib <lib>`.
+Can be via `command line <cli>`_ or as `python lib <lib>`_.
 
 cli
 ~~~
