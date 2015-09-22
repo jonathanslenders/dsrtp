@@ -21,27 +21,34 @@ PCAP file:
 .. code:: python
 
     import dsrtp
+        
+    km = dsrtp.KeyingMaterial.unpack_hex(
+        open('test/fixtures/av_material.hex').read()
+    )
     
-    material = 'hex-encoding-of-dtls-keying-material'.decode('hex') 
+    p = dsrtp.SRTPPolicy(
+        key=km.remote,
+        ssrc_type=dsrtp.SRTPPolicy.SSRC_ANY_INBOUND,
+    )
     
-    with dsrtp.SRTP(material) as ctx, \
-            open('/path/to/srtp.pcap', 'rb') as srtp_pcap, \
-            open('/path/to/rtp.pcap', 'wb') as rtp_pcap:
-        pkts = dsrtp.read_packets(srtp_pcap)
-        decrypted_pkts = decrypt_srtp_packets(ctx, pkts)
-        dsrtp.write_packets(decrypted_pkts)
+    with dsrtp.SRTP(p) as ctx, \
+            open('test/fixtures/av.pcap', 'rb') as enc_pcap, \
+            open('/tmp/dec.pcap', 'wb') as dec_pcap:
+        enc_pkts = dsrtp.read_packets(enc_pcap)
+        dec_pkts = dsrtp.decrypt_packets(ctx, enc_pkts)
+        dsrtp.write_packets(dec_pcap, dec_pkts)
 
 """
 __version__ = '0.2.0'
 
 __all__ = [
     'is_srtp_packet',
-    'is_srctp_packet',
+    'is_srtcp_packet',
     'decrypt_srtp_packet',
     'decrypt_srtcp_packet',
     'decrypt_packets',
-    'read_packets'
-    'write_packets'
+    'read_packets',
+    'write_packets',
     'KeyingMaterial',
     'SRTPPolicies',
     'SRTPPolicy',

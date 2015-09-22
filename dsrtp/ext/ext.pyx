@@ -20,7 +20,7 @@ DEF SRTP_MASTER_KEY_LEN = (SRTP_MASTER_KEY_SECRET_LEN + SRTP_MASTER_KEY_SALT_LEN
 class KeyingMaterial(object):
     """
     DTLS negotiated keying material (i.e. secret and salt) which should be used
-    as policy keys
+    as policy keys.
     """
     
     SECRET_LEN = SRTP_MASTER_KEY_SECRET_LEN
@@ -254,6 +254,7 @@ cdef class SRTP(object):
 
     cpdef init(self):
         """
+        Initializes libsrtp.srtp_t ctx.
         """
         cdef int err
         cdef SRTPPolicy policy_obj
@@ -276,6 +277,8 @@ cdef class SRTP(object):
 
     cpdef dealloc(self):
         """
+        Deallocates initialized libsrtp.srtp_t ctx, or does nothing if it
+        hasn't been initialized.
         """
         cdef int err
 
@@ -290,6 +293,7 @@ cdef class SRTP(object):
 
     cpdef object unprotect(self, object buf):
         """
+        Unprotects a SRTP packet using initialized libsrtp.srtp_t ctx. 
         """
         cdef int err
         cdef int data_len
@@ -321,6 +325,7 @@ cdef class SRTP(object):
     
     cpdef object unprotect_control(self, object buf):
         """
+        Unprotects a SRTCP packet using initialized libsrtp.srtp_t ctx.
         """
         cdef int err
         cdef int data_len
@@ -427,6 +432,9 @@ class SRTPError(Exception):
 
 
 cdef void init():
+    """
+    Initializes libsrtp. Called automatically when this module is loaded.
+    """
     cdef int err
     err = libsrtp.srtp_init()
     if err != libsrtp.err_status_ok:
