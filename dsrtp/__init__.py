@@ -177,7 +177,7 @@ def decrypt_packets(
             else:
                 try:
                     packet = stream.decrypt_srtp_packet(packet)
-                except SRTPError, ex:
+                except SRTPError as ex:
                     if drop_malformed:
                         logger.debug('dropping malformed srtp packet #%d', i + 1, exc_info=ex)
                         continue
@@ -194,7 +194,7 @@ def decrypt_packets(
             else:
                 try:
                     packet = stream.decrypt_srtcp_packet(packet)
-                except SRTPError, ex:
+                except SRTPError as ex:
                     if drop_malformed:
                         logger.debug('dropping malformed srtcp packet #%d', i + 1, exc_info=ex)
                         continue
